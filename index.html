@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bill Splitter</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; margin: 0 auto; max-width: 560px; padding: 12px; }
+  h1 { font-size: 1.3rem; }
+  h2 { font-size: 1rem; margin: 20px 0 8px; }
+  section { border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+  input, select, button { font: inherit; padding: 8px; border-radius: 8px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; }
+  button { cursor: pointer; }
+  form { display: flex; gap: 8px; }
+  form input { flex: 1; min-width: 0; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 999px; padding: 4px 6px 4px 12px; margin: 3px 4px 3px 0; }
+  .chip button { border: none; padding: 0 6px; font-size: 1rem; }
+  .item { border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent); padding: 10px 0; }
+  .itemRow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  .itemName { flex: 1; min-width: 120px; }
+  .itemPrice { width: 90px; }
+  .tag { border-radius: 999px; padding: 4px 10px; margin: 2px; opacity: 0.55; }
+  .tag.on { opacity: 1; border-color: currentColor; font-weight: 600; }
+  .invalid { background: color-mix(in srgb, red 8%, transparent); }
+  .warn { color: color-mix(in srgb, red 70%, currentColor); font-size: 0.85rem; }
+  .muted { opacity: 0.65; }
+  .transfer { padding: 6px 0; font-size: 1.05rem; }
+  .amount { float: right; font-weight: 700; }
+  .scanRow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  label.fileButton { border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  #receiptFile { display: none; }
+  #clearAll { float: right; font-size: 0.8rem; opacity: 0.7; }
+</style>
+</head>
+<body>
+<h1>Bill Splitter <button id="clearAll">clear all</button></h1>
+
+<section>
+  <h2>People</h2>
+  <div id="peopleList"></div>
+  <form id="personForm">
+    <input id="personName" placeholder="Add a name" autocomplete="off">
+    <button>Add</button>
+  </form>
+</section>
+
+<section>
+  <h2>Items</h2>
+  <div class="scanRow">
+    <label class="fileButton">📷 Scan receipt
+      <input id="receiptFile" type="file" accept="image/*">
+    </label>
+    <span id="ocrStatus" class="muted"></span>
+  </div>
+  <div id="itemsList"></div>
+  <form id="itemForm">
+    <input id="newItemName" placeholder="Item name" autocomplete="off">
+    <input id="newItemPrice" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="Price" style="flex:0 1 110px">
+    <button>Add</button>
+  </form>
+</section>
+
+<section>
+  <h2>Who pays who</h2>
+  <div id="settlement"></div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

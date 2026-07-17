@@ -94,6 +94,16 @@ if (typeof document !== "undefined") {
   function renderSettlement(): void {
     const { balances, transfers } = settle(state.items, state.people);
     const total = state.items.reduce((sum, item) => sum + (item.price > 0 ? item.price : 0), 0);
+
+    // Per-person summary: paid (fronted money), share (their part of the bill), net.
+    const paidCents: Record<string, number> = {};
+    for (const person of state.people) paidCents[person] = 0;
+    for (const item of state.items) {
+      const valid = item.price > 0 && state.people.includes(item.payer) &&
+        item.consumers.some((name) => state.people.includes(name));
+      if (valid) paidCents[item.payer] += Math.round(item.price * 100);
+    }
+
     elementById("settlement").innerHTML =
       `<div class="total"><span>Bill total</span><span>${money(total)}</span></div>` +
       (transfers.length
@@ -102,9 +112,15 @@ if (typeof document !== "undefined") {
               <span class="arrow">pays →</span> ${personDot(transfer.to)} ${escapeHtml(transfer.to)}</span>
               <span class="amount">${money(transfer.amount)}</span></div>`).join("")
         : `<p class="settled">· ALL SETTLED ·</p>`) +
-      `<details><summary>Balances</summary>${Object.entries(balances)
-        .map(([person, cents]) =>
-          `<div><span>${escapeHtml(person)}</span><span class="${cents > 0 ? "pos" : cents < 0 ? "neg" : ""}">${cents > 0 ? "gets back " : cents < 0 ? "owes " : ""}${money(Math.abs(cents) / 100)}</span></div>`).join("")}</details>`;
+      `<div class="balances">${state.people.map((person) => {
+        const net = balances[person] ?? 0;
+        const share = paidCents[person] - net;
+        return `<div class="balanceRow">
+          <span class="who">${personDot(person)} ${escapeHtml(person)}</span>
+          <span class="paidNote">paid ${money(paidCents[person] / 100)} · share ${money(share / 100)}</span>
+          <span class="${net > 0 ? "pos" : net < 0 ? "neg" : "paidNote"}">${net > 0 ? "gets back " : net < 0 ? "owes " : "even "}${money(Math.abs(net) / 100)}</span>
+        </div>`;
+      }).join("")}</div>`;
   }
 
   function render(): void {
@@ -145,6 +161,7 @@ if (typeof document !== "undefined") {
       </div>`;
     }).join("") || `<p class="muted">No items yet — scan a receipt or add one below.</p>`;
 
+    elementById("scanButton").classList.toggle("disabled", state.people.length < 2);
     renderSettlement();
   }
 
@@ -240,6 +257,11 @@ if (typeof document !== "undefined") {
     const file = fileInput.files?.[0];
     if (!file) return;
     const status = elementById("ocrStatus");
+    if (state.people.length < 2) {
+      status.textContent = "Add at least 2 people before scanning.";
+      fileInput.value = "";
+      return;
+    }
     status.textContent = "Scanning…";
     try {
       const imageBase64 = await fileToJpegBase64(file);

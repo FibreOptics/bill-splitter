@@ -58,8 +58,12 @@
     color: var(--ink-soft);
     margin: 22px 0 12px;
   }
-  h2::before, h2::after { content: " · "; }
-  section { border-top: 1px dashed var(--rule); padding-top: 2px; }
+  h2::before { content: " · "; }
+  details.section { border-top: 1px dashed var(--rule); padding-top: 2px; }
+  details.section > summary { list-style: none; cursor: pointer; }
+  details.section > summary::-webkit-details-marker { display: none; }
+  details.section > summary h2::after { content: " ▾"; }
+  details.section:not([open]) > summary h2::after { content: " ▸"; }
 
   input, button {
     font: inherit;
@@ -123,6 +127,7 @@
     display: inline-flex; align-items: center; gap: 8px;
   }
   #receiptFile { display: none; }
+  label.fileButton.disabled { opacity: .45; }
   #ocrStatus { color: var(--ink-soft); font-size: .78rem; }
 
   /* settlement */
@@ -137,8 +142,10 @@
   .transfer .arrow { color: var(--ink-soft); }
   .transfer .amount { font-weight: 700; font-variant-numeric: tabular-nums; }
   .settled { text-align: center; color: var(--paid); letter-spacing: .18em; font-size: .8rem; padding: 14px 0; }
-  details { margin-top: 10px; font-size: .8rem; color: var(--ink-soft); }
-  details div { display: flex; justify-content: space-between; padding: 3px 0; }
+  .balances { margin-top: 12px; border-top: 1px dashed var(--rule); padding-top: 8px; }
+  .balanceRow { display: flex; gap: 8px; align-items: baseline; font-size: .82rem; padding: 5px 0; }
+  .balanceRow .who { flex: 1; }
+  .balanceRow .paidNote { color: var(--ink-soft); font-size: .74rem; }
   .pos { color: var(--paid); } .neg { color: var(--debt); }
 
   #clearAll {
@@ -160,19 +167,19 @@
     <p class="tagline">itemized · tagged · settled</p>
   </header>
 
-  <section>
-    <h2>People</h2>
+  <details class="section" open>
+    <summary><h2>People</h2></summary>
     <div id="peopleList"></div>
     <form id="personForm">
       <input id="personName" placeholder="Add a name" autocomplete="off">
       <button>Add</button>
     </form>
-  </section>
+  </details>
 
-  <section>
-    <h2>Items</h2>
+  <details class="section" open>
+    <summary><h2>Items</h2></summary>
     <div class="scanRow">
-      <label class="fileButton">📷 Scan receipt
+      <label class="fileButton" id="scanButton">📷 Scan receipt
         <input id="receiptFile" type="file" accept="image/*">
       </label>
       <span id="ocrStatus"></span>
@@ -183,13 +190,13 @@
       <input id="newItemPrice" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00" style="flex:0 1 110px; text-align:right">
       <button>Add</button>
     </form>
-  </section>
+  </details>
 
-  <section>
-    <h2>Who pays who</h2>
+  <details class="section" open>
+    <summary><h2>Who pays who</h2></summary>
     <div id="settlement"></div>
     <button id="clearAll">Start a new bill</button>
-  </section>
+  </details>
 </main>
 
 <script src="app.js"></script>

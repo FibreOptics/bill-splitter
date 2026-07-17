@@ -40,7 +40,7 @@ interface ScannedItem { name: string; price: number }
 async function scanWithGemini(imageBase64: string, mediaType: string): Promise<ScannedItem[]> {
   const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const response = await gemini.models.generateContent({
-    model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    model: process.env.GEMINI_MODEL || "gemini-flash-latest",
     contents: [
       {
         role: "user",

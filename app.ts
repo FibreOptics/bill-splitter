@@ -72,6 +72,10 @@ if (typeof document !== "undefined") {
   const money = (value: number) => value.toFixed(2);
   let lastPayer: string | null = null;
 
+  const DOT_COLORS = ["#1e6e4e", "#b3372c", "#22577a", "#a4611c", "#5b4b8a", "#2a7f8f", "#8a3d62", "#556b2f"];
+  const personDot = (name: string) =>
+    `<span class="dot" style="background:${DOT_COLORS[Math.max(0, state.people.indexOf(name)) % DOT_COLORS.length]}"></span>`;
+
   function addItem(name: string, price: number): void {
     state.items.push({
       id: Date.now() + Math.random(),
@@ -91,46 +95,55 @@ if (typeof document !== "undefined") {
     const { balances, transfers } = settle(state.items, state.people);
     const total = state.items.reduce((sum, item) => sum + (item.price > 0 ? item.price : 0), 0);
     elementById("settlement").innerHTML =
-      `<p class="muted">Bill total: ${money(total)}</p>` +
+      `<div class="total"><span>Bill total</span><span>${money(total)}</span></div>` +
       (transfers.length
         ? transfers.map((transfer) =>
-            `<div class="transfer"><b>${escapeHtml(transfer.from)}</b> pays <b>${escapeHtml(transfer.to)}</b> <span class="amount">${money(transfer.amount)}</span></div>`).join("")
-        : `<p class="muted">All settled — nobody owes anything.</p>`) +
+            `<div class="transfer"><span class="who">${personDot(transfer.from)} ${escapeHtml(transfer.from)}
+              <span class="arrow">pays →</span> ${personDot(transfer.to)} ${escapeHtml(transfer.to)}</span>
+              <span class="amount">${money(transfer.amount)}</span></div>`).join("")
+        : `<p class="settled">· ALL SETTLED ·</p>`) +
       `<details><summary>Balances</summary>${Object.entries(balances)
-        .map(([person, cents]) => `<div>${escapeHtml(person)}: ${money(cents / 100)}</div>`).join("")}</details>`;
+        .map(([person, cents]) =>
+          `<div><span>${escapeHtml(person)}</span><span class="${cents > 0 ? "pos" : cents < 0 ? "neg" : ""}">${cents > 0 ? "gets back " : cents < 0 ? "owes " : ""}${money(Math.abs(cents) / 100)}</span></div>`).join("")}</details>`;
   }
 
   function render(): void {
     save();
     // People chips
     elementById("peopleList").innerHTML = state.people
-      .map((person) => `<span class="chip">${escapeHtml(person)}
+      .map((person) => `<span class="chip">${personDot(person)}${escapeHtml(person)}
         <button data-remove-person="${escapeHtml(person)}" aria-label="Remove ${escapeHtml(person)}">×</button></span>`)
-      .join("");
+      .join("") || `<p class="muted">Add everyone on the bill first.</p>`;
 
     // Items
     elementById("itemsList").innerHTML = state.items.map((item) => {
       const invalid = !item.consumers.length || !item.payer;
+      const shareCount = item.consumers.length;
       return `<div class="item ${invalid ? "invalid" : ""}" data-id="${item.id}">
         <div class="itemRow">
           <input class="itemName" value="${escapeHtml(item.name)}" aria-label="Item name">
           <input class="itemPrice" type="number" step="0.01" inputmode="decimal" value="${item.price}" aria-label="Price">
-          <button class="deleteItem" aria-label="Delete item">🗑</button>
+          <button class="deleteItem" aria-label="Delete item">✕</button>
         </div>
-        <div class="itemRow">
-          <label>Paid by
-            <select class="itemPayer">
-              ${state.people.map((person) =>
-                `<option ${person === item.payer ? "selected" : ""}>${escapeHtml(person)}</option>`).join("")}
-            </select>
-          </label>
-          <span class="consumers">${state.people.map((person) =>
-            `<button class="tag ${item.consumers.includes(person) ? "on" : ""}" data-consumer="${escapeHtml(person)}">${escapeHtml(person)}</button>`).join("")}
+        <div class="splitRow payerRow" role="radiogroup" aria-label="Who paid for ${escapeHtml(item.name)}">
+          <span class="splitLabel">Paid by</span>
+          <span>${state.people.map((person) =>
+            `<button class="tag ${person === item.payer ? "on" : ""}" role="radio" aria-checked="${person === item.payer}"
+              data-payer="${escapeHtml(person)}">${personDot(person)}${escapeHtml(person)}${person === item.payer ? " ✓" : ""}</button>`).join("")}
           </span>
         </div>
-        ${invalid ? `<div class="warn">Needs a payer and at least one person tagged — excluded from settlement.</div>` : ""}
+        <div class="splitRow" aria-label="Whose debt is ${escapeHtml(item.name)}">
+          <span class="splitLabel">Debt of</span>
+          <span>${state.people.map((person) =>
+            `<button class="tag ${item.consumers.includes(person) ? "on" : ""}" aria-pressed="${item.consumers.includes(person)}"
+              data-consumer="${escapeHtml(person)}">${personDot(person)}${escapeHtml(person)}</button>`).join("")}
+          </span>
+        </div>
+        ${shareCount > 1 && item.price > 0
+          ? `<div class="shareNote">${shareCount} people · ${money(item.price / shareCount)} each</div>` : ""}
+        ${invalid ? `<div class="warn">Pick who paid and at least one debtor — excluded until then.</div>` : ""}
       </div>`;
-    }).join("") || `<p class="muted">No items yet — scan a receipt or add one manually.</p>`;
+    }).join("") || `<p class="muted">No items yet — scan a receipt or add one below.</p>`;
 
     renderSettlement();
   }
@@ -189,21 +202,17 @@ if (typeof document !== "undefined") {
     // re-render settlement only, so typing doesn't lose focus
     renderSettlement();
   });
-  elementById("itemsList").addEventListener("change", (event) => {
-    const item = findItem(event.target);
-    const target = event.target as HTMLSelectElement;
-    if (item && target.classList.contains("itemPayer")) {
-      item.payer = target.value;
-      lastPayer = item.payer;
-      render();
-    }
-  });
   elementById("itemsList").addEventListener("click", (event) => {
     const item = findItem(event.target);
     if (!item) return;
-    const target = event.target as HTMLElement;
+    const target = (event.target as HTMLElement).closest("button") as HTMLElement | null;
+    if (!target) return;
     if (target.classList.contains("deleteItem")) {
       state.items = state.items.filter((candidate) => candidate !== item);
+      render();
+    } else if (target.dataset.payer) {
+      item.payer = target.dataset.payer;
+      lastPayer = item.payer;
       render();
     } else if (target.dataset.consumer) {
       const name = target.dataset.consumer;

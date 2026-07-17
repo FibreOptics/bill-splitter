@@ -126,7 +126,9 @@ if (typeof document !== "undefined") {
         ${invalid ? `<div class="warn">Pick who paid and at least one debtor — excluded until then.</div>` : ""}
       </div>`;
         }).join("") || `<p class="muted">No items yet — scan a receipt or add one below.</p>`;
-        elementById("scanButton").classList.toggle("disabled", state.people.length < 2);
+        const scanBlocked = state.people.length < 2;
+        elementById("scanButton").classList.toggle("disabled", scanBlocked);
+        elementById("receiptFile").disabled = scanBlocked;
         renderSettlement();
     }
     const findItem = (target) => {
@@ -219,7 +221,13 @@ if (typeof document !== "undefined") {
         canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
         return canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
     }
-    // Scan via serverless Claude vision endpoint
+    // Explain why the picker won't open while the input is disabled.
+    elementById("scanButton").addEventListener("click", () => {
+        if (state.people.length < 2) {
+            elementById("ocrStatus").textContent = "Add at least 2 people before scanning.";
+        }
+    });
+    // Scan via serverless vision endpoint
     elementById("receiptFile").addEventListener("change", async (event) => {
         const fileInput = event.target;
         const file = fileInput.files?.[0];

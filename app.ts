@@ -161,7 +161,9 @@ if (typeof document !== "undefined") {
       </div>`;
     }).join("") || `<p class="muted">No items yet — scan a receipt or add one below.</p>`;
 
-    elementById("scanButton").classList.toggle("disabled", state.people.length < 2);
+    const scanBlocked = state.people.length < 2;
+    elementById("scanButton").classList.toggle("disabled", scanBlocked);
+    (elementById("receiptFile") as HTMLInputElement).disabled = scanBlocked;
     renderSettlement();
   }
 
@@ -251,7 +253,14 @@ if (typeof document !== "undefined") {
     return canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
   }
 
-  // Scan via serverless Claude vision endpoint
+  // Explain why the picker won't open while the input is disabled.
+  elementById("scanButton").addEventListener("click", () => {
+    if (state.people.length < 2) {
+      elementById("ocrStatus").textContent = "Add at least 2 people before scanning.";
+    }
+  });
+
+  // Scan via serverless vision endpoint
   elementById("receiptFile").addEventListener("change", async (event) => {
     const fileInput = event.target as HTMLInputElement;
     const file = fileInput.files?.[0];

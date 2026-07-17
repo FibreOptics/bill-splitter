@@ -65,32 +65,52 @@ if (typeof document !== "undefined") {
     function renderSettlement() {
         const { balances, transfers } = settle(state.items, state.people);
         const total = state.items.reduce((sum, item) => sum + (item.price > 0 ? item.price : 0), 0);
-        // Per-person summary: paid (fronted money), share (their part of the bill), net.
+        // Per-person breakdown: which items they share (exact cents, same remainder rule as settle),
+        // what they paid for the group, and their net.
         const paidCents = {};
-        for (const person of state.people)
+        const shareLines = {};
+        for (const person of state.people) {
             paidCents[person] = 0;
-        for (const item of state.items) {
-            const valid = item.price > 0 && state.people.includes(item.payer) &&
-                item.consumers.some((name) => state.people.includes(name));
-            if (valid)
-                paidCents[item.payer] += Math.round(item.price * 100);
+            shareLines[person] = [];
         }
+        for (const item of state.items) {
+            const consumers = item.consumers.filter((name) => state.people.includes(name));
+            if (!consumers.length || !state.people.includes(item.payer) || !(item.price > 0))
+                continue;
+            const cents = Math.round(item.price * 100);
+            paidCents[item.payer] += cents;
+            const share = Math.floor(cents / consumers.length);
+            let remainder = cents - share * consumers.length;
+            for (const consumer of consumers) {
+                shareLines[consumer].push({ name: item.name, cents: share + (remainder-- > 0 ? 1 : 0), splitWays: consumers.length });
+            }
+        }
+        const personBlocks = state.people.map((person) => {
+            const lines = shareLines[person];
+            const shareTotal = lines.reduce((sum, line) => sum + line.cents, 0);
+            const net = balances[person] ?? 0;
+            const netText = net > 0 ? `gets back ${money(net / 100)}` : net < 0 ? `owes ${money(-net / 100)}` : "even";
+            return `<details class="person">
+        <summary><span class="who">${personDot(person)} ${escapeHtml(person)}</span>
+          <span class="paidNote">${money(shareTotal / 100)}</span>
+          <span class="${net > 0 ? "pos" : net < 0 ? "neg" : "paidNote"}">${netText}</span></summary>
+        ${lines.map((line) => `<div class="personItem"><span class="who">${escapeHtml(line.name)}${line.splitWays > 1 ? ` <span class="paidNote">/ ${line.splitWays}</span>` : ""}</span><span>${money(line.cents / 100)}</span></div>`).join("") ||
+                `<div class="personItem paidNote">no items tagged</div>`}
+        <div class="personItem subline"><span class="who">their share</span><span>${money(shareTotal / 100)}</span></div>
+        <div class="personItem"><span class="who">paid for the group</span><span>${money(paidCents[person] / 100)}</span></div>
+        <div class="personItem subline"><span class="who">${net >= 0 ? "gets back" : "owes"}</span><span class="${net > 0 ? "pos" : net < 0 ? "neg" : ""}">${money(Math.abs(net) / 100)}</span></div>
+      </details>`;
+        }).join("");
         elementById("settlement").innerHTML =
             `<div class="total"><span>Bill total</span><span>${money(total)}</span></div>` +
+                `<div class="balances">${personBlocks}</div>` +
+                `<div class="conclusion">` +
                 (transfers.length
                     ? transfers.map((transfer) => `<div class="transfer"><span class="who">${personDot(transfer.from)} ${escapeHtml(transfer.from)}
               <span class="arrow">pays →</span> ${personDot(transfer.to)} ${escapeHtml(transfer.to)}</span>
               <span class="amount">${money(transfer.amount)}</span></div>`).join("")
                     : `<p class="settled">· ALL SETTLED ·</p>`) +
-                `<div class="balances">${state.people.map((person) => {
-                    const net = balances[person] ?? 0;
-                    const share = paidCents[person] - net;
-                    return `<div class="balanceRow">
-          <span class="who">${personDot(person)} ${escapeHtml(person)}</span>
-          <span class="paidNote">paid ${money(paidCents[person] / 100)} · share ${money(share / 100)}</span>
-          <span class="${net > 0 ? "pos" : net < 0 ? "neg" : "paidNote"}">${net > 0 ? "gets back " : net < 0 ? "owes " : "even "}${money(Math.abs(net) / 100)}</span>
-        </div>`;
-                }).join("")}</div>`;
+                `</div>`;
     }
     function render() {
         save();

@@ -142,10 +142,24 @@
   .transfer .arrow { color: var(--ink-soft); }
   .transfer .amount { font-weight: 700; font-variant-numeric: tabular-nums; }
   .settled { text-align: center; color: var(--paid); letter-spacing: .18em; font-size: .8rem; padding: 14px 0; }
-  .balances { margin-top: 12px; border-top: 1px dashed var(--rule); padding-top: 8px; }
-  .balanceRow { display: flex; gap: 8px; align-items: baseline; font-size: .82rem; padding: 5px 0; }
-  .balanceRow .who { flex: 1; }
-  .balanceRow .paidNote { color: var(--ink-soft); font-size: .74rem; }
+  .balances { margin-top: 4px; }
+  details.person { border-top: 1px dashed var(--rule); padding: 2px 0 6px; }
+  details.person > summary {
+    display: flex; gap: 8px; align-items: baseline;
+    list-style: none; cursor: pointer; padding: 8px 0; font-size: .88rem;
+  }
+  details.person > summary::-webkit-details-marker { display: none; }
+  details.person > summary .who { flex: 1; }
+  details.person > summary .who::after { content: " ▸"; color: var(--ink-soft); }
+  details.person[open] > summary .who::after { content: " ▾"; }
+  .personItem {
+    display: flex; gap: 8px; align-items: baseline;
+    font-size: .78rem; padding: 3px 0 3px 18px; color: var(--ink);
+  }
+  .personItem .who { flex: 1; }
+  .personItem.subline { border-top: 1px dotted var(--rule); margin-top: 3px; padding-top: 6px; font-weight: 700; }
+  .paidNote { color: var(--ink-soft); font-size: .74rem; }
+  .conclusion { border-top: 1px dashed var(--rule); margin-top: 10px; padding-top: 4px; }
   .pos { color: var(--paid); } .neg { color: var(--debt); }
 
   #clearAll {

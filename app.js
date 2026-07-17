@@ -2,27 +2,6 @@
 // Bill Splitter — all logic. Pure functions up top (Node-testable), UI wiring below.
 // Build: npx tsc   (emits app.js, which index.html loads as a plain script)
 // ---------- pure functions ----------
-// Lines that are receipt noise, not purchasable items.
-const NOISE = /total|subtotal|sub-total|tax|vat|change|cash|credit|card|tender|balance|discount|service/i;
-function parseReceiptText(text) {
-    const items = [];
-    for (const rawLine of text.split("\n")) {
-        const line = rawLine.trim();
-        // "item name   12.50" — price (with optional thousands separators) at end of line
-        const match = line.match(/^(.*?)[\s.]{2,}?\s*[$฿€£]?\s*(\d[\d,]*[.,]\d{2})\s*$/) ||
-            line.match(/^(.+?)\s+[$฿€£]?(\d[\d,]*[.,]\d{2})\s*$/);
-        if (!match)
-            continue;
-        const name = match[1].replace(/[.\s]+$/, "").trim();
-        if (!name || NOISE.test(name))
-            continue;
-        const price = parseFloat(match[2].replace(/,(?=\d{3})/g, "").replace(",", "."));
-        if (!isFinite(price) || price <= 0)
-            continue;
-        items.push({ name, price });
-    }
-    return items;
-}
 // Positive balance = is owed money. Integer cents throughout; remainder cents go to the first consumers.
 function settle(items, people) {
     const balances = {};
@@ -57,7 +36,7 @@ function settle(items, people) {
     return { balances, transfers };
 }
 if (typeof module !== "undefined")
-    module.exports = { parseReceiptText, settle };
+    module.exports = { settle };
 // ---------- UI (browser only) ----------
 if (typeof document !== "undefined") {
     let state = { people: [], items: [] };
@@ -204,25 +183,37 @@ if (typeof document !== "undefined") {
             render();
         }
     });
-    // OCR
+    // Downscale to keep the upload small (serverless body limit) — vision doesn't need full camera resolution.
+    async function fileToJpegBase64(file, maxEdge = 2048) {
+        const bitmap = await createImageBitmap(file);
+        const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+        canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+    }
+    // Scan via serverless Claude vision endpoint
     elementById("receiptFile").addEventListener("change", async (event) => {
         const fileInput = event.target;
         const file = fileInput.files?.[0];
         if (!file)
             return;
         const status = elementById("ocrStatus");
-        status.textContent = "Scanning… (first scan downloads the OCR engine)";
+        status.textContent = "Scanning…";
         try {
-            const result = await Tesseract.recognize(file, "eng", {
-                logger: (progress) => {
-                    if (progress.status === "recognizing text") {
-                        status.textContent = `Scanning… ${Math.round(progress.progress * 100)}%`;
-                    }
-                },
+            const imageBase64 = await fileToJpegBase64(file);
+            const scanResponse = await fetch("/api/scan", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ imageBase64, mediaType: "image/jpeg" }),
             });
-            const parsed = parseReceiptText(result.data.text);
+            const result = await scanResponse.json();
+            if (!scanResponse.ok)
+                throw new Error(result.error || scanResponse.statusText);
+            const parsed = (result.items ?? []).filter((item) => item.name && item.price > 0);
             if (!parsed.length) {
-                status.textContent = "Couldn't find item lines — add items manually below.";
+                status.textContent = "No items found on that image — add items manually below.";
             }
             else {
                 for (const parsedItem of parsed)

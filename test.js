@@ -1,24 +1,6 @@
-// node test.js — fails loudly if parsing or settlement math breaks.
+// node test.js — fails loudly if settlement math breaks.
 const assert = require("node:assert");
-const { parseReceiptText, settle } = require("./app.js");
-
-// --- parseReceiptText ---
-const parsed = parseReceiptText(`
-  SUPERMART STORE #42
-  Pad Thai .......... 120.00
-  Iced Latte   65.50
-  2x Spring Roll  1,240.00
-  SUBTOTAL 1425.50
-  VAT 7% 99.79
-  TOTAL 1,525.29
-  CASH 2000.00
-  CHANGE 474.71
-`);
-assert.deepStrictEqual(
-  parsed.map((item) => [item.name, item.price]),
-  [["Pad Thai", 120], ["Iced Latte", 65.5], ["2x Spring Roll", 1240]],
-  "should extract item lines and skip totals/tax/cash noise"
-);
+const { settle } = require("./app.js");
 
 // --- settle: basic two-person ---
 let result = settle(

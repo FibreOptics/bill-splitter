@@ -3,6 +3,7 @@
     "target": "es2022",
     "lib": ["es2022", "dom", "dom.iterable"],
     "strict": true,
+    "types": [],
     "noEmitOnError": true,
     "removeComments": false
   },

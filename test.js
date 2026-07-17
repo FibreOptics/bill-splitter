@@ -1,6 +1,6 @@
 // node test.js — fails loudly if settlement math breaks.
 const assert = require("node:assert");
-const { settle } = require("./app.js");
+const { settle } = require("./public/app.js");
 
 // --- settle: basic two-person ---
 let result = settle(

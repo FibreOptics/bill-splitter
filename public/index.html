@@ -62,8 +62,10 @@
   details.section { border-top: 1px dashed var(--rule); padding-top: 2px; }
   details.section > summary { list-style: none; cursor: pointer; }
   details.section > summary::-webkit-details-marker { display: none; }
-  details.section > summary h2::after { content: " ▾"; }
-  details.section:not([open]) > summary h2::after { content: " ▸"; }
+  details.section > summary h2::after { content: " ▾"; color: var(--ink); }
+  details.section:not([open]) > summary h2::after { content: " ▸"; color: var(--ink); }
+  details.section > summary:active h2, details.person > summary:active { opacity: .6; }
+  .hint { text-align: center; color: var(--ink-soft); font-size: .68rem; letter-spacing: .08em; margin: 2px 0 6px; }
 
   input, button {
     font: inherit;
@@ -101,7 +103,7 @@
 
   .splitRow { display: flex; align-items: baseline; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
   .splitLabel {
-    flex: 0 0 5.4em;
+    flex: 0 0 6.8em;
     font-size: .68rem; letter-spacing: .14em; text-transform: uppercase;
     color: var(--ink-soft);
   }
@@ -115,19 +117,19 @@
   .tag.on { color: var(--ink); border-color: var(--ink); }
   .tag.on .dot { opacity: 1; }
   .payerRow .tag.on { border-color: var(--paid); color: var(--paid); font-weight: 700; }
-  .shareNote { font-size: .72rem; color: var(--ink-soft); margin-top: 6px; padding-left: calc(5.4em + 8px); }
+  .shareNote { font-size: .72rem; color: var(--ink-soft); margin-top: 6px; padding-left: calc(6.8em + 8px); }
   .warn { color: var(--debt); font-size: .74rem; margin-top: 8px; }
   .invalid { box-shadow: inset 3px 0 0 var(--debt); padding-left: 8px; }
 
   /* scan */
   .scanRow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
-  label.fileButton {
+  .fileButton {
     border: 1px solid var(--ink); border-radius: 2px;
-    padding: 9px 14px; cursor: pointer; min-height: 40px;
+    padding: 9px 14px; cursor: pointer; min-height: 44px;
     display: inline-flex; align-items: center; gap: 8px;
   }
   #receiptFile { display: none; }
-  label.fileButton.disabled { opacity: .45; }
+  .fileButton.disabled { opacity: .45; }
   #ocrStatus { color: var(--ink-soft); font-size: .78rem; }
 
   /* settlement */
@@ -193,11 +195,11 @@
   <details class="section" open>
     <summary><h2>Items</h2></summary>
     <div class="scanRow">
-      <label class="fileButton" id="scanButton">📷 Scan receipt
-        <input id="receiptFile" type="file" accept="image/*">
-      </label>
-      <span id="ocrStatus"></span>
+      <button type="button" id="cameraButton" class="fileButton">📷 Take photo</button>
+      <button type="button" id="libraryButton" class="fileButton">🖼 From photos</button>
+      <input id="receiptFile" type="file" accept="image/*">
     </div>
+    <span id="ocrStatus"></span>
     <div id="itemsList"></div>
     <form id="itemForm">
       <input id="newItemName" placeholder="Item name" autocomplete="off">

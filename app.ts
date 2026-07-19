@@ -132,6 +132,7 @@ if (typeof document !== "undefined") {
 
     elementById("settlement").innerHTML =
       `<div class="total"><span>Bill total</span><span>${money(total)}</span></div>` +
+      `<p class="hint">tap a name ▸ to see their items</p>` +
       `<div class="balances">${personBlocks}</div>` +
       `<div class="conclusion">` +
       (transfers.length
@@ -161,15 +162,15 @@ if (typeof document !== "undefined") {
           <input class="itemPrice" type="number" step="0.01" inputmode="decimal" value="${item.price}" aria-label="Price">
           <button class="deleteItem" aria-label="Delete item">✕</button>
         </div>
-        <div class="splitRow payerRow" role="radiogroup" aria-label="Who paid for ${escapeHtml(item.name)}">
-          <span class="splitLabel">Paid by</span>
+        <div class="splitRow payerRow" role="radiogroup" aria-label="Who paid the bill for ${escapeHtml(item.name)}">
+          <span class="splitLabel">Bill paid by</span>
           <span>${state.people.map((person) =>
             `<button class="tag ${person === item.payer ? "on" : ""}" role="radio" aria-checked="${person === item.payer}"
               data-payer="${escapeHtml(person)}">${personDot(person)}${escapeHtml(person)}${person === item.payer ? " ✓" : ""}</button>`).join("")}
           </span>
         </div>
-        <div class="splitRow" aria-label="Whose debt is ${escapeHtml(item.name)}">
-          <span class="splitLabel">Debt of</span>
+        <div class="splitRow" aria-label="Whose item is ${escapeHtml(item.name)}">
+          <span class="splitLabel">Whose item</span>
           <span>${state.people.map((person) =>
             `<button class="tag ${item.consumers.includes(person) ? "on" : ""}" aria-pressed="${item.consumers.includes(person)}"
               data-consumer="${escapeHtml(person)}">${personDot(person)}${escapeHtml(person)}</button>`).join("")}
@@ -177,13 +178,13 @@ if (typeof document !== "undefined") {
         </div>
         ${shareCount > 1 && item.price > 0
           ? `<div class="shareNote">${shareCount} people · ${money(item.price / shareCount)} each</div>` : ""}
-        ${invalid ? `<div class="warn">Pick who paid and at least one debtor — excluded until then.</div>` : ""}
+        ${invalid ? `<div class="warn">Pick who paid the bill and whose item it is — excluded until then.</div>` : ""}
       </div>`;
     }).join("") || `<p class="muted">No items yet — scan a receipt or add one below.</p>`;
 
     const scanBlocked = state.people.length < 2;
-    elementById("scanButton").classList.toggle("disabled", scanBlocked);
-    (elementById("receiptFile") as HTMLInputElement).disabled = scanBlocked;
+    elementById("cameraButton").classList.toggle("disabled", scanBlocked);
+    elementById("libraryButton").classList.toggle("disabled", scanBlocked);
     renderSettlement();
   }
 
@@ -273,12 +274,19 @@ if (typeof document !== "undefined") {
     return canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
   }
 
-  // Explain why the picker won't open while the input is disabled.
-  elementById("scanButton").addEventListener("click", () => {
+  // Buttons drive the hidden input via .click() — reliable on iOS Safari, unlike hidden-input labels.
+  function startScan(useCamera: boolean): void {
     if (state.people.length < 2) {
       elementById("ocrStatus").textContent = "Add at least 2 people before scanning.";
+      return;
     }
-  });
+    const receiptInput = elementById("receiptFile") as HTMLInputElement;
+    if (useCamera) receiptInput.setAttribute("capture", "environment");
+    else receiptInput.removeAttribute("capture");
+    receiptInput.click();
+  }
+  elementById("cameraButton").addEventListener("click", () => startScan(true));
+  elementById("libraryButton").addEventListener("click", () => startScan(false));
 
   // Scan via serverless vision endpoint
   elementById("receiptFile").addEventListener("change", async (event) => {
